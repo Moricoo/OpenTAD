@@ -10,7 +10,7 @@ dataset = dict(
     train=dict(
         pipeline=[
             dict(type="PrepareVideoInfo", format="mp4"),
-            dict(type="mmaction.DecordInit", num_threads=4),
+            dict(type="mmaction.DecordInit", num_threads=12),  # 64GB显存优化：增加解码线程
             dict(
                 type="LoadFrames",
                 num_clips=1,
@@ -36,7 +36,7 @@ dataset = dict(
         window_size=window_size,
         pipeline=[
             dict(type="PrepareVideoInfo", format="mp4"),
-            dict(type="mmaction.DecordInit", num_threads=4),
+            dict(type="mmaction.DecordInit", num_threads=8),  # 64GB显存优化：增加解码线程
             dict(type="LoadFrames", num_clips=1, method="sliding_window", scale_factor=scale_factor),
             dict(type="mmaction.DecordDecode"),
             dict(type="mmaction.Resize", scale=(-1, 160)),
@@ -50,7 +50,7 @@ dataset = dict(
         window_size=window_size,
         pipeline=[
             dict(type="PrepareVideoInfo", format="mp4"),
-            dict(type="mmaction.DecordInit", num_threads=4),
+            dict(type="mmaction.DecordInit", num_threads=8),  # 64GB显存优化：增加解码线程
             dict(type="LoadFrames", num_clips=1, method="sliding_window", scale_factor=scale_factor),
             dict(type="mmaction.DecordDecode"),
             dict(type="mmaction.Resize", scale=(-1, 160)),
@@ -111,9 +111,9 @@ model = dict(
 )
 
 solver = dict(
-    train=dict(batch_size=2, num_workers=2),
-    val=dict(batch_size=2, num_workers=2),
-    test=dict(batch_size=2, num_workers=2),
+    train=dict(batch_size=8, num_workers=12),  # 64GB显存优化：batch_size翻倍，增加workers
+    val=dict(batch_size=2, num_workers=4),  # 验证时也可以增大batch_size
+    test=dict(batch_size=2, num_workers=4),  # 测试时也可以增大batch_size
     clip_grad_norm=1,
     amp=True,
     fp16_compress=True,

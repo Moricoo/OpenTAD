@@ -33,13 +33,31 @@ def build_dataloader(dataset, batch_size, rank, world_size, shuffle=False, drop_
     )
 
     assert batch_size % world_size == 0, f"batch size {batch_size} should be divided by world size {world_size}"
+
+    # 从 kwargs 中获取 num_workers，用于条件设置
+    num_workers = kwargs.get('num_workers', 0)
+
+    # 构建 DataLoader 参数
+    dataloader_kwargs = {
+        'batch_size': batch_size // world_size,
+        'collate_fn': collate,
+        'pin_memory': True,
+        'sampler': sampler,
+    }
+
+    # 只在 num_workers > 0 时设置 prefetch_factor 和 persistent_workers
+    if num_workers > 0:
+        # 64GB显存优化：增大 prefetch_factor 以提高数据加载速度，减少GPU等待
+        dataloader_kwargs['prefetch_factor'] = 6
+        # persistent_workers=False 以减少内存占用（之前因为OOM改过）
+        dataloader_kwargs['persistent_workers'] = False
+
+    # 合并用户传入的 kwargs（可能会覆盖上面的设置）
+    dataloader_kwargs.update(kwargs)
+
     dataloader = torch.utils.data.DataLoader(
         dataset,
-        batch_size=batch_size // world_size,
-        collate_fn=collate,
-        pin_memory=True,
-        sampler=sampler,
-        **kwargs,
+        **dataloader_kwargs,
     )
     return dataloader
 
