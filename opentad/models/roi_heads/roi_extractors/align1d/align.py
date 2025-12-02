@@ -3,12 +3,21 @@ import torch
 from torch import nn
 from torch.autograd import Function
 from torch.autograd.function import once_differentiable
-import Align1D as _align_1d
+
+# 延迟导入Align1D，避免在不需要时加载
+try:
+    import Align1D as _align_1d
+    _ALIGN1D_AVAILABLE = True
+except ImportError:
+    _ALIGN1D_AVAILABLE = False
+    _align_1d = None
 
 
 class _Align1D(Function):
     @staticmethod
     def forward(ctx, input, roi, feature_dim, ratio):
+        if not _ALIGN1D_AVAILABLE:
+            raise ImportError("Align1D is not available. Please compile it first.")
         ctx.save_for_backward(roi)
         ctx.feature_dim = feature_dim
         ctx.input_shape = input.size()
@@ -19,6 +28,8 @@ class _Align1D(Function):
     @staticmethod
     @once_differentiable
     def backward(ctx, grad_output):
+        if not _ALIGN1D_AVAILABLE:
+            raise ImportError("Align1D is not available. Please compile it first.")
         (rois,) = ctx.saved_tensors
         feature_dim = ctx.feature_dim
         bs, ch, t = ctx.input_shape

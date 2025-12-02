@@ -4,6 +4,30 @@ import tqdm
 from opentad.utils.misc import AverageMeter, reduce_loss
 
 
+def filter_quantization_state(state_dict):
+    """
+    过滤掉量化层的额外状态信息（bitsandbytes的Linear4bit/8bit会包含这些）
+    这些状态信息在EMA模型和主模型之间加载时会导致不匹配
+    """
+    filtered_dict = {}
+    quantization_suffixes = [
+        '.absmax', '.quant_map', '.nested_absmax', '.nested_quant_map',
+        '.quant_state.bitsandbytes__fp4', '.quant_state.bitsandbytes__fp8'
+    ]
+
+    for key, value in state_dict.items():
+        # 跳过量化层的额外状态信息
+        skip = False
+        for suffix in quantization_suffixes:
+            if key.endswith(suffix):
+                skip = True
+                break
+        if not skip:
+            filtered_dict[key] = value
+
+    return filtered_dict
+
+
 def train_one_epoch(
     train_loader,
     model,
@@ -98,7 +122,10 @@ def val_one_epoch(
     # load the ema dict for evaluation
     if model_ema != None:
         current_dict = copy.deepcopy(model.state_dict())
-        model.load_state_dict(model_ema.module.state_dict())
+        # 过滤掉量化层的额外状态信息，避免加载错误
+        ema_state_dict = model_ema.module.state_dict()
+        filtered_ema_dict = filter_quantization_state(ema_state_dict)
+        model.load_state_dict(filtered_ema_dict, strict=False)
 
     logger.info("[Val]: Epoch {:d} Loss".format(curr_epoch))
     losses_tracker = {}

@@ -121,3 +121,9 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+# Large files
+*.tar.gz
+*.mp4
+model_package_*/checkpoint/*.pth
+*.pth
+!**/pretrained/**/*.pth

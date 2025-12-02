@@ -47,10 +47,15 @@ def build_dataloader(dataset, batch_size, rank, world_size, shuffle=False, drop_
 
     # 只在 num_workers > 0 时设置 prefetch_factor 和 persistent_workers
     if num_workers > 0:
-        # 64GB显存优化：增大 prefetch_factor 以提高数据加载速度，减少GPU等待
-        dataloader_kwargs['prefetch_factor'] = 6
-        # persistent_workers=False 以减少内存占用（之前因为OOM改过）
-        dataloader_kwargs['persistent_workers'] = False
+        # 如果kwargs中没有指定prefetch_factor，则使用默认值
+        # 训练时使用6以提高速度，验证/测试时使用2以减少内存占用
+        if 'prefetch_factor' not in kwargs:
+            # 根据num_workers数量判断：训练时通常workers较多，验证/测试时较少
+            # 如果workers <= 4，可能是验证/测试，使用较小的prefetch_factor
+            dataloader_kwargs['prefetch_factor'] = 2 if num_workers <= 4 else 6
+        # persistent_workers：如果kwargs中指定了则使用，否则默认False（避免OOM）
+        if 'persistent_workers' not in kwargs:
+            dataloader_kwargs['persistent_workers'] = False
 
     # 合并用户传入的 kwargs（可能会覆盖上面的设置）
     dataloader_kwargs.update(kwargs)

@@ -44,17 +44,20 @@ def parse_args():
 def main():
     args = parse_args()
 
-    # load config
+    # load config，MMEngine 的 Config 类的方法，用于加载 Python 配置文件
     cfg = Config.fromfile(args.config)
     if args.cfg_options is not None:
         cfg.merge_from_dict(args.cfg_options)
 
-    # DDP init
-    args.local_rank = int(os.environ["LOCAL_RANK"])
-    args.world_size = int(os.environ["WORLD_SIZE"])
-    args.rank = int(os.environ["RANK"])
+    # DDP init：Initializes the Distributed Data Parallel (DDP) for multi-GPU training. It uses nccl as the backend and retrieves rank and world size from environment variables.
+
+    args.local_rank = int(os.environ["LOCAL_RANK"]) #用于 torch.cuda.set_device()，指定当前进程使用的GPU。本地编号，用于指定本机的 GPU 设备
+    args.world_size = int(os.environ["WORLD_SIZE"]) #用于 dist.init_process_group()，告知总进程数
+    args.rank = int(os.environ["RANK"]) #用于 dist.init_process_group()，标识当前进程在分布式训练中的唯一ID。全局唯一，用于跨机器的进程通信。
     print(f"Distributed init (rank {args.rank}/{args.world_size}, local rank {args.local_rank})")
+
     dist.init_process_group("nccl", rank=args.rank, world_size=args.world_size)
+    # Sets the current CUDA device to the specified local rank. This is necessary for multi-GPU training.
     torch.cuda.set_device(args.local_rank)
 
     # set random seed, create work_dir, and save config
@@ -151,11 +154,15 @@ def main():
         checkpoint = torch.load(args.resume, map_location=device)
         resume_epoch = checkpoint["epoch"]
         logger.info("Resume epoch is {}".format(resume_epoch))
-        model.load_state_dict(checkpoint["state_dict"])
+        # 过滤掉量化层的额外状态信息
+        from opentad.cores.test_engine import filter_quantization_state
+        filtered_state_dict = filter_quantization_state(checkpoint["state_dict"])
+        model.load_state_dict(filtered_state_dict, strict=False)
         optimizer.load_state_dict(checkpoint["optimizer"])
         scheduler.load_state_dict(checkpoint["scheduler"])
         if model_ema != None:
-            model_ema.module.load_state_dict(checkpoint["state_dict_ema"])
+            filtered_ema_dict = filter_quantization_state(checkpoint["state_dict_ema"])
+            model_ema.module.load_state_dict(filtered_ema_dict, strict=False)
 
         del checkpoint  #  save memory if the model is very large such as ViT-g
         torch.cuda.empty_cache()

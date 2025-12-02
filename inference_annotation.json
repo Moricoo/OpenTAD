@@ -1,0 +1,10 @@
+{
+  "database": {
+    "03-西班牙逛街日常-2-28": {
+      "duration": 147.5,
+      "frame": 4425,
+      "subset": "test",
+      "annotations": []
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "video": "03-西班牙逛街日常-2-28.mp4",
+  "video_info": {
+    "duration": 147.5,
+    "total_frames": 4425,
+    "fps": 30.0
+  },
+  "detections": [
+    {
+      "window": 1,
+      "segment_seconds": [
+        102.27,
+        102.27
+      ],
+      "segment_frames": [
+        3068,
+        3068
+      ],
+      "start_time": "1:42",
+      "end_time": "1:42",
+      "duration": 0.0,
+      "label": "BasketballDunk",
+      "class_id": 1,
+      "confidence": 767.0
+    }
+  ],
+  "summary": {
+    "total_detections": 1,
+    "windows_processed": 1,
+    "classes_detected": 1
+  }
+}
